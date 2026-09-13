@@ -2,7 +2,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 CORRIDOR_PATH = ROOT / "corridors.csv"
 TRAIN_PATH = ROOT / "data" / "processed" / "forecasting_train_preprocessed.csv"

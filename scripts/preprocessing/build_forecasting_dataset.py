@@ -4,7 +4,7 @@ import pandas as pd
 # =========================================================
 # PATH
 # =========================================================
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 FULL_DATA_DIR = ROOT / "full_data"
 OUTPUT_DIR = ROOT / "data" / "processed"
 

@@ -9,7 +9,7 @@ import tensorflow as tf
 # PATH
 # =========================================================
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 RESULT_DIR = ROOT / "outputs" / "results"
 

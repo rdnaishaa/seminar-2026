@@ -3,7 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import networkx as nx
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 COMPARE_PATH = ROOT / "outputs/results/adaptive_vs_fixed_graph.csv"
 COORD_PATH = ROOT / "corridors.csv"

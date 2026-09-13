@@ -7,7 +7,7 @@ import requests
 from dotenv import load_dotenv
 
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 ENV_PATH = ROOT / ".env"
 FINAL_CORRIDORS_PATH = ROOT / "data" / "final_64" / "final_64_corridors.csv"
@@ -22,7 +22,7 @@ TOMTOM_API_KEY = os.getenv("TOMTOM_API_KEY")
 
 if not TOMTOM_API_KEY:
     raise ValueError(
-        "TOMTOM_API_KEY tidak ditemukan di file .env"
+        "TOMTOM_API_KEY tidak ditemukan di environment atau file .env"
     )
 
 
@@ -177,7 +177,6 @@ def collect_once():
                 f"[ERROR] {station_id}: {error}"
             )
 
-        # sedikit jeda supaya request tidak terlalu agresif
         time.sleep(0.10)
 
     new_df = pd.DataFrame(rows)
@@ -187,12 +186,31 @@ def collect_once():
             "Tidak ada data yang berhasil dikumpulkan."
         )
 
+    if len(new_df) != len(corridors):
+        raise RuntimeError(
+            f"Collection incomplete: berhasil "
+            f"{len(new_df)}/{len(corridors)} corridors."
+        )
+
+    if new_df["current_speed"].isna().any():
+        bad = new_df[
+            new_df["current_speed"].isna()
+        ]
+
+        raise RuntimeError(
+            "Ada current_speed yang kosong pada corridor:\n"
+            + bad[["station_id"]].to_string(index=False)
+        )
+
     OUTPUT_DIR.mkdir(
         parents=True,
         exist_ok=True
     )
 
-    if OUTPUT_PATH.exists():
+    if (
+        OUTPUT_PATH.exists()
+        and OUTPUT_PATH.stat().st_size > 0
+    ):
         old_df = pd.read_csv(
             OUTPUT_PATH,
             parse_dates=["obs_time_utc"]

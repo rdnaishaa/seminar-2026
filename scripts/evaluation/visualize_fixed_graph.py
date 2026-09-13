@@ -2,7 +2,7 @@ from pathlib import Path
 import pandas as pd
 import matplotlib.pyplot as plt
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 CORRIDOR_PATH = ROOT / "corridors.csv"
 EDGE_PATH = ROOT / "outputs" / "results" / "fixed_graph_edges.csv"

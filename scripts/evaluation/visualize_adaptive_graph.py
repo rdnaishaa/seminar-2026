@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import networkx as nx
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 ADJ_PATH = ROOT / "outputs/results/adaptive_graph_adjacency.csv"
 COORD_PATH = ROOT / "corridors.csv"

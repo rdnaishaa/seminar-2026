@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 # PATH CONFIGURATION
 # ============================================================
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 CORRIDORS_PATH = ROOT / "corridors.csv"
 

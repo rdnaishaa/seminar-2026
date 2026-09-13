@@ -1,7 +1,7 @@
 from pathlib import Path
 import pandas as pd
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 FINAL64_PATH = ROOT / "data" / "final_64" / "final_64_corridors.csv"
 UPDATED_DATA_DIR = ROOT / "data_update_dosen" / "full_data_update"

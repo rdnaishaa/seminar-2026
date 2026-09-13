@@ -3,7 +3,7 @@ from pathlib import Path
 import pandas as pd
 
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 
 INPUT_PATH = ROOT / "data" / "collected" / "tomtom_flow_final64.csv"
 OUTPUT_PATH = ROOT / "data" / "collected" / "latest_12h_final64.csv"
