@@ -59,7 +59,9 @@ def get_corridor_history(
             "obs_time_utc"
         )
 
-    return df
+    return df.reset_index(
+        drop=True
+    )
 
 
 # ============================================================
@@ -93,7 +95,6 @@ def hourly_profile(
     ]
 
     if missing_columns:
-
         return pd.DataFrame()
 
     # --------------------------------------------------------
@@ -147,7 +148,57 @@ def hourly_profile(
         )
     )
 
-    return profile
+    return profile.reset_index(
+        drop=True
+    )
+
+
+# ============================================================
+# CORRIDOR SUMMARY
+# ============================================================
+
+def get_corridor_summary(
+    history,
+    station_id,
+):
+
+    df = get_corridor_history(
+        history,
+        station_id,
+    )
+
+    if df.empty:
+        return None
+
+    required_columns = [
+        "current_speed",
+        "free_flow_speed",
+        "congestion_ratio",
+    ]
+
+    missing_columns = [
+        column
+        for column in required_columns
+        if column not in df.columns
+    ]
+
+    if missing_columns:
+        return None
+
+    return {
+        "avg_speed": float(
+            df["current_speed"].mean()
+        ),
+        "avg_free_flow_speed": float(
+            df["free_flow_speed"].mean()
+        ),
+        "avg_congestion_ratio": float(
+            df["congestion_ratio"].mean()
+        ),
+        "observations": int(
+            df["current_speed"].count()
+        ),
+    }
 
 
 # ============================================================
@@ -167,14 +218,11 @@ def get_best_worst_hour(
     if profile.empty:
         return None
 
-    # Minimal 3 distinct WIB hours
-    # before summarizing best/worst.
     if (
         profile["hour_wib"]
         .nunique()
         < 3
     ):
-
         return None
 
     valid_profile = (
@@ -208,10 +256,17 @@ def get_best_worst_hour(
         "best_speed": float(
             best["avg_speed"]
         ),
+        "best_congestion_ratio": float(
+            best["avg_congestion_ratio"]
+        ),
+
         "worst_hour": int(
             worst["hour_wib"]
         ),
         "worst_speed": float(
             worst["avg_speed"]
+        ),
+        "worst_congestion_ratio": float(
+            worst["avg_congestion_ratio"]
         ),
     }

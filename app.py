@@ -24,6 +24,7 @@ from src.historical_analysis import (
     get_latest_status,
     hourly_profile,
     get_best_worst_hour,
+    get_corridor_summary,
 )
 
 from src.route_history import (
@@ -31,8 +32,8 @@ from src.route_history import (
     get_route_departure_summary,
 )
 
-WIB = ZoneInfo("Asia/Jakarta")
 
+WIB = ZoneInfo("Asia/Jakarta")
 
 # ============================================================
 # PAGE CONFIG
@@ -53,48 +54,325 @@ st.set_page_config(
 st.markdown(
     """
     <style>
+
+    /* -------- Fonts (Google's own: Roboto + Google Sans fallback) -------- */
+    @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&family=Google+Sans:wght@400;500;700&display=swap');
+
+    :root {
+        --gm-blue: #1a73e8;
+        --gm-blue-dark: #1967d2;
+        --gm-blue-tint: #e8f0fe;
+        --gm-green: #188038;
+        --gm-green-tint: #e6f4ea;
+        --gm-yellow: #ea8600;
+        --gm-yellow-tint: #fef7e0;
+        --gm-red: #d93025;
+        --gm-red-tint: #fce8e6;
+        --gm-text: #202124;
+        --gm-text-muted: #5f6368;
+        --gm-border: #dadce0;
+        --gm-surface: #ffffff;
+        --gm-app-bg: #f1f3f4;
+        --gm-radius-sm: 8px;
+        --gm-radius-md: 12px;
+        --gm-radius-lg: 24px;
+        --gm-shadow-1: 0 1px 2px rgba(60,64,67,0.30), 0 1px 3px 1px rgba(60,64,67,0.15);
+        --gm-shadow-2: 0 1px 3px rgba(60,64,67,0.30), 0 4px 8px 3px rgba(60,64,67,0.15);
+    }
+
+    html, body, [class*="css"] {
+        font-family: 'Google Sans', 'Roboto', Arial, sans-serif;
+        color: var(--gm-text) !important;
+    }
+
+    /* App background = Google Maps grey */
+    [data-testid="stAppViewContainer"] {
+        background-color: var(--gm-app-bg);
+    }
+    [data-testid="stHeader"] {
+        background-color: transparent;
+    }
+
+    /* -------- Force text color everywhere (fixes invisible text when
+       the underlying Streamlit theme is still set to dark) -------- */
+    [data-testid="stAppViewContainer"] p,
+    [data-testid="stAppViewContainer"] span,
+    [data-testid="stAppViewContainer"] label,
+    [data-testid="stAppViewContainer"] li,
+    [data-testid="stAppViewContainer"] h1,
+    [data-testid="stAppViewContainer"] h2,
+    [data-testid="stAppViewContainer"] h3,
+    [data-testid="stAppViewContainer"] h4,
+    [data-testid="stAppViewContainer"] h5,
+    [data-testid="stAppViewContainer"] h6,
+    [data-testid="stMarkdownContainer"] p,
+    [data-testid="stMarkdownContainer"] span,
+    [data-testid="stMarkdownContainer"] li,
+    [data-testid="stMarkdownContainer"] h1,
+    [data-testid="stMarkdownContainer"] h2,
+    [data-testid="stMarkdownContainer"] h3,
+    [data-testid="stMarkdownContainer"] h4,
+    [data-testid="stMarkdownContainer"] h5,
+    section[data-testid="stSidebar"] label,
+    section[data-testid="stSidebar"] p,
+    section[data-testid="stSidebar"] span,
+    div[data-baseweb="select"] *,
+    div[data-baseweb="input"] input,
+    div[data-testid="stDateInput"] input,
+    div[data-testid="stTimeInput"] input,
+    div[data-baseweb="popover"] * {
+        color: var(--gm-text) !important;
+    }
+
+    /* Widget backgrounds should stay white/light regardless of theme */
+    div[data-baseweb="select"] > div,
+    div[data-baseweb="popover"] div[role="listbox"],
+    div[data-testid="stDateInput"] input,
+    div[data-testid="stTimeInput"] input {
+        background-color: var(--gm-surface) !important;
+    }
+
     .block-container {
-        padding-top: 2rem;
+        padding-top: 1.2rem;
         padding-bottom: 3rem;
+        max-width: 1320px;
     }
-    h1, h2, h3 {
-        font-weight: 700;
+
+    h1, h2, h3, h4 {
+        font-family: 'Google Sans', 'Roboto', sans-serif;
+        font-weight: 500;
+        color: var(--gm-text);
+        letter-spacing: 0;
     }
+
+    p, span, div, label {
+        font-family: 'Roboto', sans-serif;
+    }
+
+    hr {
+        border-color: var(--gm-border) !important;
+    }
+
+    /* -------- Search-bar style hero (mimics the GMaps search box) -------- */
+    .tc-hero {
+        background: var(--gm-surface);
+        border-radius: var(--gm-radius-lg);
+        padding: 14px 24px;
+        margin-bottom: 18px;
+        box-shadow: var(--gm-shadow-1);
+        display: flex;
+        align-items: center;
+        gap: 14px;
+    }
+    .tc-hero-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: var(--gm-blue-tint);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.3rem;
+        flex-shrink: 0;
+    }
+    .tc-hero h1 {
+        margin: 0;
+        font-size: 1.35rem;
+        font-weight: 500;
+        color: var(--gm-text);
+    }
+    .tc-hero p {
+        margin: 2px 0 0 0;
+        color: var(--gm-text-muted);
+        font-size: 0.88rem;
+        max-width: 640px;
+    }
+
+    /* -------- Metrics (place-info chips) -------- */
     div[data-testid="stMetric"] {
-        background-color: rgba(151, 166, 195, 0.08);
-        border: 1px solid rgba(151, 166, 195, 0.2);
-        border-radius: 12px;
+        background: var(--gm-surface);
+        border: 1px solid var(--gm-border);
+        border-radius: var(--gm-radius-md);
         padding: 14px 16px;
+        box-shadow: var(--gm-shadow-1);
+        transition: box-shadow 0.15s ease;
     }
-    div[data-testid="stMetricLabel"] {
-        font-size: 0.85rem;
-        opacity: 0.8;
+    div[data-testid="stMetric"]:hover {
+        box-shadow: var(--gm-shadow-2);
     }
+    div[data-testid="stMetricLabel"],
+    div[data-testid="stMetricLabel"] * {
+        font-size: 0.78rem;
+        font-weight: 500;
+        color: var(--gm-text-muted) !important;
+        letter-spacing: 0.01em;
+    }
+    div[data-testid="stMetricValue"],
+    div[data-testid="stMetricValue"] * {
+        font-family: 'Google Sans', sans-serif;
+        font-weight: 500;
+        color: var(--gm-text) !important;
+    }
+
+    /* -------- Badges (Google Maps "Open" / "Busy" pill style) -------- */
     .badge {
-        display: inline-block;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
         padding: 4px 12px;
         border-radius: 999px;
-        font-size: 0.85rem;
-        font-weight: 600;
+        font-size: 0.78rem;
+        font-weight: 500;
+        letter-spacing: 0.01em;
     }
-    .badge-green {
-        background-color: rgba(34, 197, 94, 0.15);
-        color: #16a34a;
+    .badge-green, .badge-green * {
+        background-color: var(--gm-green-tint) !important;
+        color: var(--gm-green) !important;
     }
-    .badge-yellow {
-        background-color: rgba(234, 179, 8, 0.15);
-        color: #ca8a04;
+    .badge-yellow, .badge-yellow * {
+        background-color: var(--gm-yellow-tint) !important;
+        color: var(--gm-yellow) !important;
     }
-    .badge-red {
-        background-color: rgba(239, 68, 68, 0.15);
-        color: #dc2626;
+    .badge-red, .badge-red * {
+        background-color: var(--gm-red-tint) !important;
+        color: var(--gm-red) !important;
     }
+
+    /* -------- Location card (Google Maps "place card") -------- */
     .location-card {
-        border: 1px solid rgba(151, 166, 195, 0.2);
-        border-radius: 14px;
-        padding: 18px 20px;
+        background: var(--gm-surface);
+        border: 1px solid var(--gm-border);
+        border-radius: var(--gm-radius-md);
+        padding: 20px 22px;
         height: 100%;
+        box-shadow: var(--gm-shadow-1);
     }
+    .location-card h4 {
+        margin-top: 0;
+        margin-bottom: 10px;
+        font-size: 1rem;
+        font-weight: 500;
+        color: var(--gm-text);
+    }
+
+    /* -------- Tabs (styled like GMaps top filter chips) -------- */
+    div[data-baseweb="tab-list"] {
+        gap: 8px;
+        border-bottom: none !important;
+        background: var(--gm-surface);
+        padding: 6px;
+        border-radius: 999px;
+        box-shadow: var(--gm-shadow-1);
+        width: fit-content;
+    }
+    button[data-baseweb="tab"],
+    button[data-baseweb="tab"] * {
+        font-weight: 500;
+        font-size: 0.88rem;
+        border-radius: 999px !important;
+        padding: 8px 16px !important;
+        color: var(--gm-text-muted) !important;
+    }
+    button[data-baseweb="tab"][aria-selected="true"],
+    button[data-baseweb="tab"][aria-selected="true"] * {
+        background-color: var(--gm-blue-tint) !important;
+        color: var(--gm-blue) !important;
+    }
+    div[data-baseweb="tab-highlight"] {
+        display: none !important;
+    }
+    div[data-baseweb="tab-border"] {
+        display: none !important;
+    }
+
+    /* -------- Sidebar (mimics the GMaps left search panel) -------- */
+    section[data-testid="stSidebar"] {
+        background-color: var(--gm-surface);
+        border-right: 1px solid var(--gm-border);
+    }
+    section[data-testid="stSidebar"] h1,
+    section[data-testid="stSidebar"] h2,
+    section[data-testid="stSidebar"] h3 {
+        font-size: 1rem;
+        font-weight: 500;
+        color: var(--gm-text);
+    }
+
+    /* Selects / inputs styled like GMaps rounded search fields */
+    section[data-testid="stSidebar"] div[data-baseweb="select"] > div,
+    div[data-testid="stDateInput"] input,
+    div[data-testid="stTimeInput"] input {
+        border-radius: 999px !important;
+        border: 1px solid var(--gm-border) !important;
+        background-color: var(--gm-app-bg) !important;
+        box-shadow: none !important;
+    }
+    section[data-testid="stSidebar"] div[data-baseweb="select"] > div:hover {
+        border-color: var(--gm-blue) !important;
+    }
+
+    /* -------- Buttons styled like Google's blue "Directions" button -------- */
+    .stButton > button, .stDownloadButton > button,
+    .stButton > button *, .stDownloadButton > button * {
+        background-color: var(--gm-blue) !important;
+        color: #fff !important;
+        border: none;
+        border-radius: 999px;
+        font-weight: 500;
+        padding: 8px 20px;
+        box-shadow: var(--gm-shadow-1);
+    }
+    .stButton > button:hover, .stDownloadButton > button:hover,
+    .stButton > button:hover *, .stDownloadButton > button:hover * {
+        background-color: var(--gm-blue-dark) !important;
+        color: #fff !important;
+    }
+
+    /* -------- Progress bar (GMaps blue) -------- */
+    div[data-testid="stProgress"] > div > div {
+        background-color: var(--gm-blue);
+        border-radius: 999px;
+    }
+    div[data-testid="stProgress"] > div {
+        background-color: #e8eaed;
+        border-radius: 999px;
+    }
+
+    /* -------- Alerts / info boxes -------- */
+    div[data-testid="stAlert"] {
+        border-radius: var(--gm-radius-md);
+        border: 1px solid var(--gm-border);
+        box-shadow: var(--gm-shadow-1);
+    }
+
+    /* -------- Captions -------- */
+    .stCaption, [data-testid="stCaptionContainer"] {
+        color: var(--gm-text-muted) !important;
+        font-size: 0.82rem;
+    }
+
+    /* -------- Map container: rounded corners + shadow like an embedded GMaps frame -------- */
+    iframe {
+        border-radius: var(--gm-radius-md);
+    }
+    div[data-testid="stIFrame"] {
+        border-radius: var(--gm-radius-md);
+        overflow: hidden;
+        box-shadow: var(--gm-shadow-2);
+        border: 1px solid var(--gm-border);
+    }
+
+    /* -------- Expander / containers -------- */
+    div[data-testid="stVerticalBlockBorderWrapper"] {
+        border-radius: var(--gm-radius-md) !important;
+    }
+
+    /* -------- Subheaders get a small blue accent bar -------- */
+    h3 {
+        position: relative;
+        padding-left: 0;
+    }
+
     </style>
     """,
     unsafe_allow_html=True,
@@ -144,7 +422,7 @@ def render_location_status(label, row):
     st.markdown(
         f"""
         <div class="location-card">
-            <h4 style="margin-top:0;">📍 {label}</h4>
+            <h4>📍 {label}</h4>
             <span class="badge {badge_class}">{badge_text}</span>
         </div>
         """,
@@ -257,7 +535,7 @@ def build_corridor_graph_map(corridors_df, edges_df):
 
         folium.PolyLine(
             locations=[(a[0], a[1]), (b[0], b[1])],
-            color="#2563eb",
+            color="#1a73e8",
             weight=2,
             opacity=0.55,
             tooltip=f"{a[2]} ↔ {b[2]} · {edge['distance_km']:.1f} km",
@@ -267,9 +545,9 @@ def build_corridor_graph_map(corridors_df, edges_df):
         folium.CircleMarker(
             location=(lat, lon),
             radius=6,
-            color="#1d4ed8",
+            color="#1967d2",
             fill=True,
-            fill_color="#3b82f6",
+            fill_color="#4285f4",
             fill_opacity=0.9,
             tooltip=label,
         ).add_to(fmap)
@@ -281,13 +559,21 @@ def build_corridor_graph_map(corridors_df, edges_df):
 # HEADER
 # ============================================================
 
-st.title("🚦 Historical Traffic Explorer")
-st.write(
-    "Lihat rute perjalanan, kondisi lalu lintas pada lokasi yang dipantau, "
-    "dan pola kecepatan berdasarkan data historis TomTom."
+st.markdown(
+    """
+    <div class="tc-hero">
+        <div class="tc-hero-icon">🚦</div>
+        <div>
+            <h1>Historical Traffic Explorer</h1>
+            <p>
+                Lihat rute perjalanan, kondisi lalu lintas pada lokasi yang dipantau,
+                dan pola kecepatan berdasarkan data historis TomTom.
+            </p>
+        </div>
+    </div>
+    """,
+    unsafe_allow_html=True,
 )
-
-st.divider()
 
 
 # ============================================================
@@ -517,7 +803,7 @@ with tab_status:
 
     else:
 
-        latest_status = get_latest_status(history)
+        latest_status = latest = get_latest_status(history)
         latest_timestamp = latest_status["obs_time_utc"].max()
 
         if latest_timestamp is not None:
@@ -628,9 +914,6 @@ with tab_history:
                 )
 
 
-# ------------------------------------------------------------
-# TAB 4 — ABOUT
-# ------------------------------------------------------------
 # ------------------------------------------------------------
 # TAB — ROUTE HISTORY
 # ------------------------------------------------------------
@@ -816,7 +1099,7 @@ with tab_route_history:
                 "Bagian ini tidak merepresentasikan seluruh ruas jalan "
                 "di sepanjang rute."
             )
-            
+
 with tab_about:
 
     st.subheader("Tentang Informasi di Halaman Ini")

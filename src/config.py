@@ -4,16 +4,7 @@ import os
 from dotenv import load_dotenv
 
 
-# ============================================================
-# ROOT
-# ============================================================
-
-ROOT = Path(__file__).resolve().parents[2]
-
-
-# ============================================================
-# DATA PATHS
-# ============================================================
+ROOT = Path(__file__).resolve().parents[1]
 
 CORRIDORS_PATH = ROOT / "corridors.csv"
 
@@ -24,73 +15,29 @@ FINAL_CORRIDORS_PATH = (
     / "final_64_corridors.csv"
 )
 
-UPDATED_DATA_DIR = (
-    ROOT
-    / "data_update_dosen"
-    / "full_data_update"
-)
-
-COLLECTED_PATH = (
+TRAIN_HISTORY_PATH = (
     ROOT
     / "data"
-    / "collected"
-    / "tomtom_flow_final64.csv"
+    / "final_64"
+    / "forecasting_train_preprocessed.csv"
 )
 
-
-# ============================================================
-# ENVIRONMENT
-# ============================================================
-
 ENV_PATH = ROOT / ".env"
-
 
 load_dotenv(
     dotenv_path=ENV_PATH,
     override=False,
 )
 
-
-TOMTOM_API_KEY = os.getenv(
-    "TOMTOM_API_KEY"
-)
+TOMTOM_API_KEY = os.getenv("TOMTOM_API_KEY")
 
 
-# ============================================================
-# DISPLAY NAME HELPER
-# ============================================================
+def station_id_to_display_name(station_id):
+    value = str(station_id)
 
-def station_id_to_display_name(station_id: str) -> str:
-    """
-    Convert station IDs such as:
-        tt_kebonjeruk
-        tt_kelapagading
-        tt_tbsimatupang
+    if value.startswith("tt_"):
+        value = value[3:]
 
-    into readable fallback labels.
+    value = value.replace("_", " ")
 
-    More specific names can still come from corridors.csv.
-    """
-
-    name = str(station_id)
-
-    if name.startswith("tt_"):
-        name = name[3:]
-
-    special_names = {
-        "bsd": "BSD",
-        "gatsu": "Gatot Subroto",
-        "tbsimatupang": "TB Simatupang",
-        "mtharyono": "MT Haryono",
-        "sparman": "S. Parman",
-        "merdekabar": "Merdeka Barat",
-    }
-
-    if name in special_names:
-        return special_names[name]
-
-    return (
-        name
-        .replace("_", " ")
-        .title()
-    )
+    return value.title()

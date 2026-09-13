@@ -1,58 +1,18 @@
-from pathlib import Path
-
 import pandas as pd
 
 from src.config import (
     CORRIDORS_PATH,
     FINAL_CORRIDORS_PATH,
-    UPDATED_DATA_DIR,
-    COLLECTED_PATH,
+    TRAIN_HISTORY_PATH,
     station_id_to_display_name,
 )
 
 
 # ============================================================
-# HELPERS
-# ============================================================
-
-def normalize_corridor_file(value):
-    """
-    Normalize corridor identifier into filename form:
-        tt_sudirman -> tt_sudirman.csv
-        tt_sudirman.csv -> tt_sudirman.csv
-    """
-
-    value = str(value)
-
-    if not value.endswith(".csv"):
-        value = f"{value}.csv"
-
-    return value
-
-
-def corridor_file_to_station_id(value):
-    """
-    Convert:
-        tt_sudirman.csv -> tt_sudirman
-    """
-
-    value = str(value)
-
-    if value.endswith(".csv"):
-        value = value[:-4]
-
-    return value
-
-
-# ============================================================
-# LOAD FINAL 64 CORRIDORS
+# FINAL 64 CORRIDORS
 # ============================================================
 
 def load_final64():
-
-    # --------------------------------------------------------
-    # Load master metadata
-    # --------------------------------------------------------
 
     corridors = pd.read_csv(
         CORRIDORS_PATH
@@ -63,113 +23,105 @@ def load_final64():
         .astype(str)
     )
 
-    # --------------------------------------------------------
-    # Load frozen final 64 corridor list
-    # --------------------------------------------------------
-
     final64 = pd.read_csv(
         FINAL_CORRIDORS_PATH
     )
 
-    # Support several possible column names
     if "corridor_file" in final64.columns:
 
-        corridor_files = (
+        station_ids = (
             final64["corridor_file"]
             .dropna()
             .astype(str)
-            .apply(normalize_corridor_file)
+            .str.replace(".csv", "", regex=False)
             .tolist()
         )
 
     elif "station_id" in final64.columns:
 
-        corridor_files = (
+        station_ids = (
             final64["station_id"]
             .dropna()
             .astype(str)
-            .apply(normalize_corridor_file)
+            .str.replace(".csv", "", regex=False)
             .tolist()
         )
 
     elif "file" in final64.columns:
 
-        corridor_files = (
+        station_ids = (
             final64["file"]
             .dropna()
             .astype(str)
-            .apply(normalize_corridor_file)
+            .str.replace(".csv", "", regex=False)
             .tolist()
         )
 
     else:
-
         raise ValueError(
-            "Tidak menemukan kolom corridor_file, station_id, "
-            "atau file pada final_64_corridors.csv"
+            "final_64_corridors.csv tidak memiliki "
+            "kolom corridor_file, station_id, atau file."
         )
-
-    station_ids = [
-        corridor_file_to_station_id(x)
-        for x in corridor_files
-    ]
-
-    # --------------------------------------------------------
-    # Match with corridor metadata
-    # --------------------------------------------------------
 
     selected = corridors[
-        corridors["station_id"].isin(
-            station_ids
-        )
+        corridors["station_id"].isin(station_ids)
     ].copy()
 
-    # Preserve exact final-64 node order
     selected = (
         selected
         .set_index("station_id")
         .reindex(station_ids)
-        .dropna(
-            how="all"
-        )
+        .dropna(how="all")
         .reset_index()
     )
 
-    # --------------------------------------------------------
-    # Display names
-    # --------------------------------------------------------
+    if "name" in selected.columns:
 
-    selected["display_name"] = (
-        selected.apply(
-            lambda row: (
+        selected["display_name"] = selected.apply(
+            lambda row:
                 f"{station_id_to_display_name(row['station_id'])}"
-                f" — {row['name']}"
-            ),
+                f" — {row['name']}",
             axis=1,
         )
-    )
+
+    else:
+
+        selected["display_name"] = (
+            selected["station_id"]
+            .apply(station_id_to_display_name)
+        )
 
     return selected
 
 
 # ============================================================
-# PREPARE TRAFFIC DATA
+# PREPARE TRAINING HISTORY
 # ============================================================
 
-def prepare_history(
-    df,
-    station_id=None,
-):
+def prepare_history(df):
 
     if df.empty:
         return df
 
     df = df.copy()
 
-    # --------------------------------------------------------
-    # Timestamp
-    # --------------------------------------------------------
+    # corridor_file contoh:
+    # tt_bekasi.csv
+    # menjadi station_id:
+    # tt_bekasi
+    if "corridor_file" in df.columns:
 
+        df["station_id"] = (
+            df["corridor_file"]
+            .astype(str)
+            .str.replace(
+                ".csv",
+                "",
+                regex=False,
+            )
+        )
+
+    # Timestamp sudah UTC pada dataset training
     if "obs_time_utc" in df.columns:
 
         df["obs_time_utc"] = pd.to_datetime(
@@ -178,28 +130,6 @@ def prepare_history(
             errors="coerce",
         )
 
-    # --------------------------------------------------------
-    # station_id
-    # --------------------------------------------------------
-
-    if "station_id" not in df.columns:
-
-        if station_id is not None:
-            df["station_id"] = str(
-                station_id
-            )
-
-    else:
-
-        df["station_id"] = (
-            df["station_id"]
-            .astype(str)
-        )
-
-    # --------------------------------------------------------
-    # Numeric traffic columns
-    # --------------------------------------------------------
-
     numeric_columns = [
         "current_speed",
         "free_flow_speed",
@@ -207,6 +137,7 @@ def prepare_history(
         "free_flow_travel_time",
         "congestion_ratio",
         "confidence",
+        "segment_id",
     ]
 
     for column in numeric_columns:
@@ -218,234 +149,82 @@ def prepare_history(
                 errors="coerce",
             )
 
-    # --------------------------------------------------------
-    # Generate congestion_ratio if absent
-    # --------------------------------------------------------
-
-    if (
-        "congestion_ratio"
-        not in df.columns
-        and "current_speed" in df.columns
-        and "free_flow_speed" in df.columns
-    ):
-
-        denominator = (
-            df["free_flow_speed"]
-            .replace(
-                0,
-                pd.NA,
-            )
-        )
-
-        df["congestion_ratio"] = (
-            1
-            - (
-                df["current_speed"]
-                / denominator
-            )
-        )
-
-    # --------------------------------------------------------
-    # Keep ratio between 0 and 1
-    # --------------------------------------------------------
-
-    if "congestion_ratio" in df.columns:
-
-        df["congestion_ratio"] = (
-            df["congestion_ratio"]
-            .clip(
-                lower=0,
-                upper=1,
-            )
-        )
-
     return df
 
 
 # ============================================================
-# LOAD UPDATED RAW HISTORY — FINAL 64
-# ============================================================
-
-def load_updated_history():
-
-    corridors = load_final64()
-
-    datasets = []
-
-    for _, corridor in corridors.iterrows():
-
-        station_id = str(
-            corridor["station_id"]
-        )
-
-        filename = (
-            f"{station_id}.csv"
-        )
-
-        file_path = (
-            UPDATED_DATA_DIR
-            / filename
-        )
-
-        if not file_path.exists():
-
-            print(
-                f"[WARNING] Missing updated file: "
-                f"{file_path}"
-            )
-
-            continue
-
-        df = pd.read_csv(
-            file_path
-        )
-
-        df = prepare_history(
-            df,
-            station_id=station_id,
-        )
-
-        datasets.append(
-            df
-        )
-
-    if not datasets:
-
-        return pd.DataFrame()
-
-    return pd.concat(
-        datasets,
-        ignore_index=True,
-        sort=False,
-    )
-
-
-# ============================================================
-# LOAD HISTORICAL + COLLECTOR
+# LOAD HISTORY
 # ============================================================
 
 def load_history():
+    """
+    Memuat data historis yang benar-benar digunakan
+    sebagai TRAINING SET penelitian.
 
-    datasets = []
+    Sumber:
+    data/final_64/forecasting_train_preprocessed.csv
 
-    # --------------------------------------------------------
-    # Updated TomTom historical dataset
-    # --------------------------------------------------------
+    Tidak menggunakan:
+    - validation set
+    - test set
+    - live collector
+    """
 
-    historical = (
-        load_updated_history()
+    if not TRAIN_HISTORY_PATH.exists():
+
+        raise FileNotFoundError(
+            f"Training dataset tidak ditemukan: "
+            f"{TRAIN_HISTORY_PATH}"
+        )
+
+    history = pd.read_csv(
+        TRAIN_HISTORY_PATH
     )
 
-    if not historical.empty:
+    history = prepare_history(
+        history
+    )
 
-        datasets.append(
-            historical
-        )
-
-    # --------------------------------------------------------
-    # Automatic live collector
-    # --------------------------------------------------------
-
-    if COLLECTED_PATH.exists():
-
-        collected = pd.read_csv(
-            COLLECTED_PATH
-        )
-
-        collected = prepare_history(
-            collected
-        )
-
-        datasets.append(
-            collected
-        )
-
-    # --------------------------------------------------------
-    # No data
-    # --------------------------------------------------------
-
-    if not datasets:
-
+    if history.empty:
         return pd.DataFrame()
 
-    # --------------------------------------------------------
-    # Merge
-    # --------------------------------------------------------
-
-    df = pd.concat(
-        datasets,
-        ignore_index=True,
-        sort=False,
+    # Hapus timestamp invalid
+    history = history.dropna(
+        subset=[
+            "obs_time_utc",
+            "station_id",
+        ]
     )
 
-    # --------------------------------------------------------
-    # Drop invalid timestamps
-    # --------------------------------------------------------
-
-    if "obs_time_utc" in df.columns:
-
-        df = df.dropna(
-            subset=[
-                "obs_time_utc"
-            ]
-        )
-
-    # --------------------------------------------------------
-    # Keep final 64 only
-    # --------------------------------------------------------
-
-    final64 = (
-        load_final64()[
-            "station_id"
-        ]
+    # Hanya Final64
+    final_station_ids = (
+        load_final64()["station_id"]
         .astype(str)
         .tolist()
     )
 
-    if "station_id" in df.columns:
-
-        df = df[
-            df["station_id"].isin(
-                final64
-            )
-        ].copy()
-
-    # --------------------------------------------------------
-    # Remove duplicate observations
-    #
-    # Collector comes after historical dataset,
-    # therefore latest collector row is retained.
-    # --------------------------------------------------------
-
-    if (
-        "station_id" in df.columns
-        and "obs_time_utc" in df.columns
-    ):
-
-        df = df.drop_duplicates(
-            subset=[
-                "station_id",
-                "obs_time_utc",
-            ],
-            keep="last",
+    history = history[
+        history["station_id"].isin(
+            final_station_ids
         )
+    ].copy()
 
-    # --------------------------------------------------------
-    # Sort
-    # --------------------------------------------------------
+    # Hindari duplicate timestamp per corridor
+    history = history.drop_duplicates(
+        subset=[
+            "station_id",
+            "obs_time_utc",
+        ],
+        keep="last",
+    )
 
-    if (
-        "station_id" in df.columns
-        and "obs_time_utc" in df.columns
-    ):
+    history = history.sort_values(
+        [
+            "obs_time_utc",
+            "station_id",
+        ]
+    )
 
-        df = df.sort_values(
-            [
-                "obs_time_utc",
-                "station_id",
-            ]
-        )
-
-    return df.reset_index(
+    return history.reset_index(
         drop=True
     )
