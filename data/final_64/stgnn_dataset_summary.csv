@@ -1,0 +1,4 @@
+split,samples,X_shape,y_shape,observed_target_points,total_target_points,imputed_input_points,total_input_points,imputed_input_pct
+train,415,"(415, 12, 64, 1)","(415, 3, 64)",44736,79680,139648,318720,43.81526104417671
+val,92,"(92, 12, 64, 1)","(92, 3, 64)",9024,17664,34944,70656,49.45652173913043
+test,93,"(93, 12, 64, 1)","(93, 3, 64)",8896,17856,35712,71424,50.0

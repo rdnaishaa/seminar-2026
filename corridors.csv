@@ -1,0 +1,97 @@
+station_id,name,city,lat,lon
+tt_sudirman,Jl. Sudirman (HI),Jabodetabek,-6.2088,106.8228
+tt_thamrin,Jl. MH Thamrin,Jabodetabek,-6.188,106.823
+tt_gatsu,Jl. Gatot Subroto,Jabodetabek,-6.2349,106.83
+tt_kuningan,Jl. HR Rasuna Said,Jabodetabek,-6.221,106.83
+tt_cawang,Cawang interchange,Jabodetabek,-6.245,106.865
+tt_grogol,Grogol,Jabodetabek,-6.166,106.79
+tt_kelapagading,Kelapa Gading,Jabodetabek,-6.158,106.906
+tt_tbsimatupang,TB Simatupang,Jabodetabek,-6.293,106.82
+tt_kebonjeruk,Tol Kebon Jeruk,Jabodetabek,-6.195,106.77
+tt_bekasi,Tol Jakarta-Cikampek,Jabodetabek,-6.24,106.975
+tt_depok,Jl. Margonda (Depok),Jabodetabek,-6.4,106.82
+tt_tangerang,Tol Jakarta-Merak,Jabodetabek,-6.2,106.63
+tt_bsd,BSD/Serpong,Jabodetabek,-6.3,106.67
+tt_bogor,Tol Jagorawi (Bogor),Jabodetabek,-6.5,106.84
+tt_sudirman_s,Jl. Sudirman Selatan (Senayan),Jabodetabek,-6.229,106.802
+tt_mtharyono,Jl. MT Haryono (Cawang),Jabodetabek,-6.245,106.882
+tt_merdekabar,Jl. Medan Merdeka Barat,Jabodetabek,-6.1755,106.82
+tt_majapahit,Jl. Majapahit,Jabodetabek,-6.165,106.8175
+tt_daanmogot,Jl. Daan Mogot (Grogol),Jabodetabek,-6.158,106.755
+tt_rayabogor,Jl. Raya Bogor (Pasar Rebo),Jabodetabek,-6.33,106.86
+tt_kalimalang,Jl. Kalimalang (Bekasi),Jabodetabek,-6.256,106.965
+tt_sultanagung,Jl. Sultan Agung (Bekasi),Jabodetabek,-6.255,107.005
+tt_sparman,Jl. Letjen S. Parman (Slipi),Jabodetabek,-6.185,106.795
+tt_lingkardalam,Tol Lingkar Dalam (Semanggi),Jabodetabek,-6.225,106.81
+tt_hayamwuruk,Jl. Hayam Wuruk,Jabodetabek,-6.145,106.815
+tt_gajahmada,Jl. Gajah Mada,Jabodetabek,-6.152,106.81
+tt_kramatraya,Jl. Kramat Raya (Senen),Jabodetabek,-6.182,106.845
+tt_salemba,Jl. Salemba Raya,Jabodetabek,-6.185,106.85
+tt_otista,Jl. Otista Raya,Jabodetabek,-6.235,106.86
+tt_matraman,Jl. Matraman Raya,Jabodetabek,-6.225,106.85
+tt_pramuka,Jl. Pramuka,Jabodetabek,-6.19,106.865
+tt_pemuda,Jl. Pemuda,Jabodetabek,-6.18,106.88
+tt_pluit,Jl. Pluit Raya,Jabodetabek,-6.122,106.778
+tt_kapukmuara,Jl. Kapuk Muara,Jabodetabek,-6.115,106.745
+tt_martadinata,Jl. RE Martadinata,Jabodetabek,-6.108,106.88
+tt_gunungsahari,Jl. Gunung Sahari,Jabodetabek,-6.148,106.83
+tt_manggadua,Jl. Mangga Dua Raya,Jabodetabek,-6.142,106.822
+tt_cakungcilincing,Jl. Raya Cakung-Cilincing,Jabodetabek,-6.148,106.93
+tt_rayabekasi_cakung,Jl. Raya Bekasi (Cakung),Jabodetabek,-6.172,106.945
+tt_perintis,Jl. Perintis Kemerdekaan,Jabodetabek,-6.187,106.905
+tt_jatinegara,Jl. Jatinegara Timur,Jabodetabek,-6.215,106.87
+tt_supomo,Jl. Prof. Supomo (Sahardjo),Jabodetabek,-6.245,106.848
+tt_cijantung,Jl. Raya Cijantung,Jabodetabek,-6.31,106.855
+tt_tambun,Jl. Raya Tambun (Bekasi),Jabodetabek,-6.268,107.05
+tt_cibitung,Jl. Raya Cibitung,Jabodetabek,-6.245,107.095
+tt_fatmawati,Jl. RS Fatmawati,Jabodetabek,-6.292,106.797
+tt_lebakbulus,Jl. Lebak Bulus,Jabodetabek,-6.305,106.785
+tt_kemang,Jl. Kemang Raya,Jabodetabek,-6.26,106.815
+tt_tendean,Jl. Kapt. Tendean,Jabodetabek,-6.242,106.832
+tt_mampang,Jl. Mampang Prapatan,Jabodetabek,-6.248,106.828
+tt_ragunan,Jl. Ragunan (TMII),Jabodetabek,-6.295,106.815
+tt_lentengagung,Jl. Lenteng Agung,Jabodetabek,-6.31,106.835
+tt_pondokindah,Jl. Pondok Indah,Jabodetabek,-6.28,106.78
+tt_purikembangan,Jl. Puri Kembangan,Jabodetabek,-6.205,106.73
+tt_kedoya,Jl. Kedoya Raya,Jabodetabek,-6.195,106.755
+tt_pospengumben,Jl. Raya Pos Pengumben,Jabodetabek,-6.225,106.73
+tt_karawaci,Jl. Karawaci (Tangerang),Jabodetabek,-6.22,106.61
+tt_cipondoh,Jl. Cipondoh (Tangerang),Jabodetabek,-6.195,106.68
+tt_jorr_west,Tol JORR Barat,Jabodetabek,-6.235,106.695
+tt_cibinong,Jl. Raya Cibinong,Jabodetabek,-6.48,106.85
+tt_cimanggis,Jl. Raya Cimanggis,Jabodetabek,-6.37,106.885
+tt_cilodong,Jl. Raya Cilodong,Jabodetabek,-6.43,106.84
+tt_gadingserpong,Jl. Gading Serpong,Jabodetabek,-6.245,106.64
+tt_merak_toll_e,Tol Jkt-Merak (Timur),Jabodetabek,-6.24,106.59
+tt_sedyatmo_toll,Tol Sedyatmo (Bandara),Jabodetabek,-6.103,106.722
+tt_yossudarso,Jl. Yos Sudarso (Sunter-Priok),Jabodetabek,-6.135,106.888
+tt_cibitung_cilincing,Tol Cibitung-Cilincing (Tarumajaya),Jabodetabek,-6.18,107.045
+tt_ciledug,Jl. HOS Cokroaminoto (Ciledug),Jabodetabek,-6.236,106.708
+tt_ciputat,Jl. Ir H Juanda (Ciputat),Jabodetabek,-6.308,106.748
+tt_bintaro,Jl. Bintaro Utama,Jabodetabek,-6.273,106.728
+tt_serpong_raya,Jl. Raya Serpong,Jabodetabek,-6.283,106.668
+tt_pamulang,Jl. Siliwangi (Pamulang),Jabodetabek,-6.343,106.738
+tt_cikupa,Jl. Raya Serang (Cikupa),Jabodetabek,-6.223,106.525
+tt_daanmogot_km19,Jl. Daan Mogot KM19 (Batuceper),Jabodetabek,-6.162,106.695
+tt_serpong_toll,Tol Jakarta-Serpong (Pondok Ranji),Jabodetabek,-6.276,106.715
+tt_cinere,Jl. Cinere Raya,Jabodetabek,-6.335,106.784
+tt_sawangan,Jl. Raya Sawangan,Jabodetabek,-6.403,106.776
+tt_juanda_depok,Jl. Ir H Juanda (Depok),Jabodetabek,-6.381,106.833
+tt_aksesui,Jl. Akses UI (Kelapa Dua),Jabodetabek,-6.348,106.823
+tt_citayam,Jl. Raya Citayam,Jabodetabek,-6.435,106.802
+tt_parung,Jl. Raya Parung,Jabodetabek,-6.47,106.733
+tt_pajajaran_bgr,Jl. Pajajaran (Bogor),Jabodetabek,-6.601,106.806
+tt_sholehiskandar,Jl. Sholeh Iskandar (Bogor),Jabodetabek,-6.561,106.783
+tt_ciawi,Jl. Raya Puncak (Ciawi),Jabodetabek,-6.648,106.848
+tt_dramaga,Jl. Raya Dramaga (Bogor),Jabodetabek,-6.557,106.745
+tt_antasari_toll,Tol Depok-Antasari (Krukut),Jabodetabek,-6.335,106.796
+tt_cijago_toll,Tol Cijago (Depok),Jabodetabek,-6.376,106.865
+tt_transyogi,Jl. Transyogi (Cibubur),Jabodetabek,-6.364,106.91
+tt_cileungsi,Jl. Raya Cileungsi,Jabodetabek,-6.405,106.96
+tt_narogong,Jl. Raya Narogong (Rawalumbu),Jabodetabek,-6.29,106.97
+tt_jatiasih,Jl. Jatiasih Raya,Jabodetabek,-6.305,106.952
+tt_pondokgede,Jl. Raya Pondok Gede,Jabodetabek,-6.283,106.91
+tt_cikarang,Cikarang (Jababeka),Jabodetabek,-6.282,107.152
+tt_harapanindah,Boulevard Harapan Indah,Jabodetabek,-6.183,106.983
+tt_becakayu_toll,Tol Becakayu,Jabodetabek,-6.243,106.92
+tt_jorr_e,Tol JORR Timur (Jatiwarna),Jabodetabek,-6.296,106.913

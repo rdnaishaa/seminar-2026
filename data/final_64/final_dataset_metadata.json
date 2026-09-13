@@ -1,0 +1,22 @@
+{
+  "num_nodes": 64,
+  "input_length": 12,
+  "horizons": [
+    1,
+    3,
+    6
+  ],
+  "target": "current_speed",
+  "features_imputed": [
+    "current_speed",
+    "congestion_ratio"
+  ],
+  "imputation": "causal forward-fill only for globally isolated 1-hour gaps",
+  "long_gap_handling": "not imputed; used as temporal segment boundaries",
+  "split_strategy": "chronological 70/15/15 on common hourly grid",
+  "overlap_start": "2026-08-12 04:00:00+00:00",
+  "overlap_end": "2026-09-11 12:00:00+00:00",
+  "total_grid_hours": 729,
+  "valid_hours_after_preprocessing": 710,
+  "num_temporal_segments": 10
+}

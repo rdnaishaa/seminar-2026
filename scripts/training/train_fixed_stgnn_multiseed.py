@@ -1,0 +1,495 @@
+from pathlib import Path
+import argparse
+
+import numpy as np
+import pandas as pd
+import tensorflow as tf
+
+from sklearn.metrics import mean_absolute_error, mean_squared_error
+
+
+# =========================================================
+# CONFIG
+# =========================================================
+ROOT = Path(__file__).resolve().parents[1]
+
+DATA_DIR = ROOT / "data" / "processed"
+RESULT_DIR = ROOT / "outputs" / "results"
+
+RESULT_DIR.mkdir(parents=True, exist_ok=True)
+
+HORIZONS = [1, 3, 6]
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--seed", type=int, default=42)
+args = parser.parse_args()
+
+SEED = args.seed
+EPOCHS = 100
+BATCH_SIZE = 32
+
+tf.keras.utils.set_random_seed(SEED)
+
+try:
+    tf.config.experimental.enable_op_determinism()
+except Exception:
+    pass
+
+# =========================================================
+# LOAD DATA
+# =========================================================
+train = np.load(
+    DATA_DIR / "stgnn_train.npz",
+    allow_pickle=True
+)
+
+val = np.load(
+    DATA_DIR / "stgnn_val.npz",
+    allow_pickle=True
+)
+
+test = np.load(
+    DATA_DIR / "stgnn_test.npz",
+    allow_pickle=True
+)
+
+X_train = train["X"].astype(np.float32)
+y_train = train["y"].astype(np.float32)
+mask_train = train["mask"].astype(bool)
+
+X_val = val["X"].astype(np.float32)
+y_val = val["y"].astype(np.float32)
+mask_val = val["mask"].astype(bool)
+
+X_test = test["X"].astype(np.float32)
+y_test = test["y"].astype(np.float32)
+mask_test = test["mask"].astype(bool)
+
+test_times = test["target_times"]
+
+
+NUM_NODES = X_train.shape[2]
+INPUT_LENGTH = X_train.shape[1]
+
+
+print("\n=== FIXED GRAPH ST-GNN ===")
+print(f"Train X : {X_train.shape}")
+print(f"Val X   : {X_val.shape}")
+print(f"Test X  : {X_test.shape}")
+
+
+# =========================================================
+# LOAD FIXED ADJACENCY
+# =========================================================
+adj_df = pd.read_csv(
+    RESULT_DIR / "fixed_graph_adjacency.csv",
+    index_col=0
+)
+
+corridors = adj_df.index.tolist()
+
+A = adj_df.values.astype(np.float32)
+
+
+# =========================================================
+# NORMALIZE ADJACENCY
+#
+# A_hat = D^(-1/2) A D^(-1/2)
+# =========================================================
+degree = np.sum(A, axis=1)
+
+D_inv_sqrt = np.diag(
+    1.0 / np.sqrt(degree)
+)
+
+A_norm = (
+    D_inv_sqrt
+    @ A
+    @ D_inv_sqrt
+).astype(np.float32)
+
+A_tf = tf.constant(
+    A_norm,
+    dtype=tf.float32
+)
+
+print("\nAdjacency:")
+print(f"Shape : {A.shape}")
+print(f"Edges including self-loop : {int(A.sum())}")
+
+
+# =========================================================
+# MASKED LOSS
+#
+# Hanya target OBSERVASI ASLI yang dihitung.
+# Target hasil imputasi tidak ikut menjadi label training.
+# =========================================================
+def masked_mse(y_true_with_mask, y_pred):
+
+    y_true = y_true_with_mask[..., 0]
+    mask = y_true_with_mask[..., 1]
+
+    squared_error = tf.square(
+        y_true - y_pred
+    )
+
+    masked_error = (
+        squared_error * mask
+    )
+
+    return (
+        tf.reduce_sum(masked_error)
+        /
+        (tf.reduce_sum(mask) + 1e-8)
+    )
+
+
+def combine_y_mask(y, mask):
+
+    return np.stack(
+        [
+            y,
+            mask.astype(np.float32)
+        ],
+        axis=-1
+    )
+
+
+train_target = combine_y_mask(
+    y_train,
+    mask_train
+)
+
+val_target = combine_y_mask(
+    y_val,
+    mask_val
+)
+
+
+class FixedGraphConv(tf.keras.layers.Layer):
+
+    def __init__(
+        self,
+        units,
+        adjacency,
+        **kwargs
+    ):
+        super().__init__(**kwargs)
+
+        self.units = units
+        self.adjacency = adjacency
+
+        self.projection = tf.keras.layers.Dense(
+            units,
+            activation="relu"
+        )
+
+    def call(self, inputs):
+
+        # Informasi dari graph / neighbors
+        graph_x = tf.einsum(
+            "ij,btjf->btif",
+            self.adjacency,
+            inputs
+        )
+
+        # Pertahankan informasi asli node + informasi graph
+        x = tf.concat(
+            [inputs, graph_x],
+            axis=-1
+        )
+
+        x = self.projection(x)
+
+        return x
+
+# =========================================================
+# MODEL
+# =========================================================
+inputs = tf.keras.Input(
+    shape=(
+        INPUT_LENGTH,
+        NUM_NODES,
+        1
+    )
+)
+
+# Spatial modeling
+x = FixedGraphConv(
+    units=16,
+    adjacency=A_tf,
+    name="fixed_graph_conv"
+)(inputs)
+
+
+# =========================================================
+# TEMPORAL MODELING PER NODE
+#
+# (batch, time, node, feature)
+# ->
+# (batch, node, time, feature)
+# =========================================================
+x = tf.keras.layers.Permute(
+    (2, 1, 3)
+)(x)
+
+
+# Merge batch & node temporarily
+x = tf.keras.layers.Reshape(
+    (
+        NUM_NODES,
+        INPUT_LENGTH * 16
+    )
+)(x)
+
+# Each node gets temporal representation
+x = tf.keras.layers.Reshape(
+    (
+        NUM_NODES,
+        INPUT_LENGTH,
+        16
+    )
+)(x)
+
+
+# Apply GRU independently to each node
+x = tf.keras.layers.TimeDistributed(
+    tf.keras.layers.GRU(
+        32
+    )
+)(x)
+
+
+x = tf.keras.layers.Dropout(
+    0.2
+)(x)
+
+
+# Multi-horizon output per node
+x = tf.keras.layers.TimeDistributed(
+    tf.keras.layers.Dense(
+        len(HORIZONS)
+    )
+)(x)
+
+
+# batch × node × horizon
+# ->
+# batch × horizon × node
+outputs = tf.keras.layers.Permute(
+    (2, 1)
+)(x)
+
+
+model = tf.keras.Model(
+    inputs=inputs,
+    outputs=outputs
+)
+
+
+model.compile(
+    optimizer=tf.keras.optimizers.Adam(
+        learning_rate=0.001
+    ),
+    loss=masked_mse
+)
+
+
+model.summary()
+
+
+# =========================================================
+# TRAIN
+# =========================================================
+callbacks = [
+
+    tf.keras.callbacks.EarlyStopping(
+        monitor="val_loss",
+        patience=10,
+        restore_best_weights=True
+    ),
+
+    tf.keras.callbacks.ReduceLROnPlateau(
+        monitor="val_loss",
+        factor=0.5,
+        patience=5,
+        min_lr=1e-5
+    )
+]
+
+
+history = model.fit(
+    X_train,
+    train_target,
+    validation_data=(
+        X_val,
+        val_target
+    ),
+    epochs=EPOCHS,
+    batch_size=BATCH_SIZE,
+    callbacks=callbacks,
+    verbose=1
+)
+
+
+# =========================================================
+# TEST PREDICTION
+# =========================================================
+pred_scaled = model.predict(
+    X_test,
+    verbose=0
+)
+
+
+# =========================================================
+# INVERSE SCALE
+# =========================================================
+scaler_data = np.load(
+    DATA_DIR / "stgnn_scaler.npz"
+)
+
+mean = float(
+    scaler_data["mean"][0]
+)
+
+scale = float(
+    scaler_data["scale"][0]
+)
+
+
+y_true = (
+    y_test * scale
+    + mean
+)
+
+y_pred = (
+    pred_scaled * scale
+    + mean
+)
+
+
+# =========================================================
+# EVALUATION
+# =========================================================
+results = []
+prediction_rows = []
+
+
+for h_idx, horizon in enumerate(HORIZONS):
+
+    mask = mask_test[
+        :, h_idx, :
+    ]
+
+    true = y_true[
+        :, h_idx, :
+    ][mask]
+
+    pred = y_pred[
+        :, h_idx, :
+    ][mask]
+
+    mae = mean_absolute_error(
+        true,
+        pred
+    )
+
+    rmse = np.sqrt(
+        mean_squared_error(
+            true,
+            pred
+        )
+    )
+
+    print(
+        f"\nFixed ST-GNN t+{horizon}h | "
+        f"MAE = {mae:.3f} km/h | "
+        f"RMSE = {rmse:.3f} km/h | "
+        f"Points = {len(true)}"
+    )
+
+    results.append({
+        "model": "Fixed ST-GNN",
+        "horizon": horizon,
+        "MAE": mae,
+        "RMSE": rmse,
+        "evaluated_points": len(true)
+    })
+
+
+    for sample_idx in range(
+        len(y_true)
+    ):
+
+        for node_idx, corridor in enumerate(
+            corridors
+        ):
+
+            if not mask_test[
+                sample_idx,
+                h_idx,
+                node_idx
+            ]:
+                continue
+
+            prediction_rows.append({
+                "horizon": horizon,
+                "target_time": test_times[
+                    sample_idx,
+                    h_idx
+                ],
+                "corridor": corridor,
+                "y_true": y_true[
+                    sample_idx,
+                    h_idx,
+                    node_idx
+                ],
+                "fixed_stgnn_pred": y_pred[
+                    sample_idx,
+                    h_idx,
+                    node_idx
+                ]
+            })
+
+
+# =========================================================
+# SAVE
+# =========================================================
+pd.DataFrame(
+    results
+).to_csv(
+    RESULT_DIR /
+    f"fixed_stgnn_seed{SEED}_results.csv",
+    index=False
+)
+
+
+pd.DataFrame(
+    prediction_rows
+).to_csv(
+    RESULT_DIR /
+    f"fixed_stgnn_seed{SEED}_predictions.csv",
+    index=False
+)
+
+
+pd.DataFrame(
+    history.history
+).to_csv(
+    RESULT_DIR /
+    f"fixed_stgnn_seed{SEED}_training_history.csv",
+    index=False
+)
+
+
+model.save_weights(
+    RESULT_DIR /
+    f"fixed_stgnn_seed{SEED}.weights.h5"
+)
+
+
+print("\n=== SAVED ===")
+print(f"outputs/results/fixed_stgnn_seed{SEED}_results.csv")
+print(f"outputs/results/fixed_stgnn_seed{SEED}_predictions.csv")
+print(f"outputs/results/fixed_stgnn_seed{SEED}_training_history.csv")
+print(f"outputs/results/fixed_stgnn_seed{SEED}.weights.h5")

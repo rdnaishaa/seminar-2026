@@ -1,0 +1,4 @@
+horizon,best_mae_model,best_mae,best_rmse_model,best_rmse
+1,Naive,2.7605299949645996,Adaptive ST-GNN,4.394611419307973
+3,Adaptive ST-GNN,3.061549711227417,Adaptive ST-GNN,4.764152718210366
+6,Adaptive ST-GNN,3.159780263900757,Adaptive ST-GNN,4.876645707948759
